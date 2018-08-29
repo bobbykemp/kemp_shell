@@ -8,15 +8,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-struct line_item{
-	name[1024];
-	size[256];
-}
-
-int compare(const void *x, const void *y){
-
-}
-
 int main(int argc, char const *argv[])
 {
 	char curr_direc[256], cmd[256], my_file[256], target_direc[256];
@@ -26,8 +17,6 @@ int main(int argc, char const *argv[])
 	int list_count, target, k, i, num, file_size, file_name_len;
 	pid_t child_process_id;
 	time_t t;
-
-	struct line_item data[256];
 
 	char file_names[256][256];
 	int file_sizes[256];
@@ -49,12 +38,12 @@ int main(int argc, char const *argv[])
 
 		printf("Contents of current working directory:\n");
 		
-		d = opendir(".");
-		list_count = 0;
+		/*d = opendir(".");
+		list_count = 0;*/
 
 		printf("\nE/e - Edit; R/r - Run; C/c - Change Directory\n");
 
-		printf("\n=====================================\n");
+		/*printf("\n=====================================\n");
 		printf("DIRECTORIES:\n");
 		printf("=====================================\n");
 
@@ -87,15 +76,44 @@ int main(int argc, char const *argv[])
 				file_size = st.st_size;
 				printf("%-5d%-*sSize (bytes): %d\n", list_count, file_name_len, dir->d_name, file_size);
 				strcpy(file_names[list_count], dir->d_name);
-				file_sizes[list_count++] = file_size;
+				strcpy(file_sizes[list_count++], file_size);
 			}
-			/*if (list_count % 8 == 0) { 
+			if (list_count % 8 == 0) { 
 				printf("Hit N for Next\n");
 				k = getchar();
-			}*/
+			}
 		}
 
-		closedir(d);
+		closedir(d);*/
+
+		//fork into parent and child processes
+		child_process_id = fork();
+
+		//a negative (-) process id indicates a fork failure
+		if(child_process_id < 0){
+			perror("fork failed");
+			exit(1);
+		}
+
+		//a process id of zero (0) indicates this is the child process
+		//which is where we want to run pico
+		else if(child_process_id == 0){
+
+			//Run pico editor with execl(_path to pico_, _path to pico_, _path to file to edit_, _NULL pointer_)
+			execl("/bin/ls", "ls", "-a", "-l", "--sort=size", (char *)NULL);
+
+			//If execl throws an error, let us know about it
+			perror("execl() has failed\n");
+
+			//exit
+			_exit(1);
+		}
+
+		//a positive (+) process id indicates this is the parent process
+		//which we want to have wait for the child process to exit
+		else if(child_process_id > 0){
+			wait(NULL);
+		}
 
 		printf("-------------------------------------\n");
 
@@ -190,14 +208,6 @@ int main(int argc, char const *argv[])
 				strcat(curr_direc, dir_names[num]);
 				printf("Changing to directory: %s\n", curr_direc);
 				system(chdir(curr_direc));
-
-				break;
-
-			case 's':
-
-				printf("Sorting\n");
-
-				bubble_sort(file_sizes, file_names, sizeof(file_names));
 
 				break;
 		}
