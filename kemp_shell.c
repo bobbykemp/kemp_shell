@@ -65,7 +65,7 @@ int main(int argc, char const *argv[])
 
   print_to = 0;
 
-  while(1){ hello
+  while(1){
 
     num_files = 0;
 
