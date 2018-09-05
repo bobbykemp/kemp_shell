@@ -78,7 +78,7 @@ int main(int argc, char const *argv[])
 
     //TODO: Account for longer directory names
 
-    printf("print to is %d\n", print_to);
+    // printf("print to is %d\n", print_to);
 
     getcwd(curr_direc, 200);
     printf("\nCurrent working directory: %s\n", curr_direc);
@@ -93,10 +93,8 @@ int main(int argc, char const *argv[])
 
     printf("\nE/e - Edit; R/r - Run; C/c - Change Directory\n");
 
-    // printf("\n=====================================\n");
     printf("\nDIRECTORIES:\n");
-    // printf("=====================================\n");
-    printf("------------\n");
+    printf("\n------------");
 
     while ((dir = readdir(d)) != NULL) {
       if((dir->d_type) & DT_DIR){
@@ -110,10 +108,8 @@ int main(int argc, char const *argv[])
     d = opendir(".");
     list_count = 0;
 
-    // printf("\n=====================================\n");
-    printf("\nFILES:\n");
-    // printf("=====================================\n");
-    printf("----------\n");
+    printf("\nFILES:");
+    printf("\n------\n");
 
     file_name_len = 0;
     
@@ -140,10 +136,6 @@ int main(int argc, char const *argv[])
         //increment our total number of files
         num_files++;
       }
-      /*if (list_count % 8 == 0) { 
-        printf("Hit N for Next\n");
-        k = getchar();
-      }*/
     }
 
     //has the user requested a sort?
@@ -172,6 +164,8 @@ int main(int argc, char const *argv[])
     else{
       sort = 0; //false
     }
+
+    // printf("List count is %d\n", list_count);
 
     //after we've sorted (if necessary) we can now print for the user
     for (int i = print_to; i < list_count; ++i)
