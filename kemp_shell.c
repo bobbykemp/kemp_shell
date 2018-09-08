@@ -9,6 +9,9 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 
+#define PRINT_GROUP_SIZE 4
+#define MAX_IND 1024
+
 typedef struct line_item{
   char name[1024];
   int size;
@@ -49,29 +52,23 @@ int compare_time_dsc(const void *x, const void *y){
 
 int main(int argc, char const *argv[])
 {
-  char curr_direc[256], cmd[256], my_file[256], target_direc[256], sort_type, sort_direction, buff, run_params;
+  char curr_direc[256], cmd[256], my_file[256], target_direc[256], sort_type, sort_direction, buff, run_params, name[256];
   DIR *d;
   struct dirent *dir;
   struct stat st;
   line *loc;
-  int list_count, target, k, i, num, file_name_len, num_files, sort, print_to;
+  int list_count, target, k, i, num, file_name_len, sort, print_to;
   pid_t child_process_id;
   time_t t;
 
-  line files[256];
-  line dirs[256];
+  line *files = (line*) malloc(MAX_IND * sizeof(*files));
+  line *dirs  = (line*) malloc(MAX_IND * sizeof(*dirs));
 
   system((const char *)chdir(argv[1]));
 
   print_to = 0;
 
   while(1){
-
-    num_files = 0;
-
-    /*printf("\n-------------------------------------\n");
-
-    printf("----------K E M P S H E L L----------\n\n");*/
 
     t = time(NULL);
     printf("The current time is : %s", ctime(&t));
@@ -91,13 +88,16 @@ int main(int argc, char const *argv[])
     d = opendir(".");
     list_count = 0;
 
-    printf("\nE/e - Edit; R/r - Run; C/c - Change Directory\n");
+    printf("\nE/e - Edit; R/r - Run; C/c - Change Directory; Q/q - Quit; S/s - Sort File Listings\n");
 
     printf("\nDIRECTORIES:\n");
-    printf("\n------------");
+    printf("\n------------\n");
 
     while ((dir = readdir(d)) != NULL) {
       if((dir->d_type) & DT_DIR){
+        if(list_count > MAX_IND){
+          dirs = (line*) realloc(dirs, (2 * sizeof(line)));
+        }
         printf("%d   %s \n", list_count, dir->d_name);
         strcpy(dirs[list_count++].name, dir->d_name);
       }
@@ -116,6 +116,10 @@ int main(int argc, char const *argv[])
     while ((dir = readdir(d)) != NULL) {
       if((dir->d_type) & DT_REG){
 
+        if(list_count > MAX_IND){
+          files = (line*) realloc(files, (2 * sizeof(line)));
+        }
+
         if(strlen(dir->d_name) > file_name_len){
           file_name_len = strlen(dir->d_name) + 2;
         }
@@ -132,28 +136,31 @@ int main(int argc, char const *argv[])
 
         //save each file time of last edit to struct in file array
         files[list_count++].time = st.st_mtime;
-
-        //increment our total number of files
-        num_files++;
       }
     }
+
+    /*int answer = num_files / 4;
+
+    printf("num file is %d\n", num_files);
+
+    printf("numfiles divided by 4 is %d\n", answer);*/
 
     //has the user requested a sort?
     if(sort){
       if(sort_type == 't' && sort_direction == 'a'){
-        qsort(files, num_files, sizeof(line), compare_time_asc);
+        qsort(files, list_count, sizeof(line), compare_time_asc);
       }
 
       else if(sort_type == 't' && sort_direction == 'd'){
-        qsort(files, num_files, sizeof(line), compare_time_dsc);
+        qsort(files, list_count, sizeof(line), compare_time_dsc);
       }
 
       else if(sort_type == 's' && sort_direction == 'a'){
-        qsort(files, num_files, sizeof(line), compare_size_asc);
+        qsort(files, list_count, sizeof(line), compare_size_asc);
       }
 
       else if(sort_type == 's' && sort_direction == 'd'){
-        qsort(files, num_files, sizeof(line), compare_size_dsc);
+        qsort(files, list_count, sizeof(line), compare_size_dsc);
       }
 
       else{
@@ -165,27 +172,38 @@ int main(int argc, char const *argv[])
       sort = 0; //false
     }
 
-    // printf("List count is %d\n", list_count);
+    printf("List count is %d\n", list_count);
+    printf("Print to is %d\n", print_to);
+
+    int num_div = list_count / PRINT_GROUP_SIZE;
+    int leftovers = list_count % PRINT_GROUP_SIZE;
+
+    if(print_to == list_count){
+      print_to = 0;
+    }
 
     //after we've sorted (if necessary) we can now print for the user
     for (int i = print_to; i < list_count; ++i)
     {
       char *s;
       s = ctime(&files[i].time);
-      printf("%-3d%-*sSize (bytes): %-10d%-24s\n", i, file_name_len, files[i].name, files[i].size, s);
+
+      printf("%-3d%-*sSize (bytes): %-8d%-24s\n", i, file_name_len, files[i].name, files[i].size, s);
 
       if(i % 4 == 0 && i != 0){
         printf("Press enter to get more...\n");
         print_to = ++i;
 
         break;
-        // buff = getchar();
       }
 
-      if(i == list_count - 1){
+      if( (i == list_count - 1) || (i == list_count) ){
           printf("Press enter to cycle the list\n");
           print_to = 0;
+
+          break;
       }
+
     }
 
 
@@ -306,6 +324,27 @@ int main(int argc, char const *argv[])
 
         break;
 
+      case 'm':
+      case 'M':
+
+        strcpy(target_direc, curr_direc);
+        strcat(target_direc, "/");
+        printf("Move which file?:\n");
+        scanf("%d", &num);
+        strcpy(name, files[num].name);
+        strcat(target_direc, name);
+
+        strcat(curr_direc, "/");
+        printf("Move file to which directory?:\n");
+        scanf("%d", &num);
+        strcat(curr_direc, dirs[num].name);
+        printf("Moving to directory: %s\n", curr_direc);
+        strcat(curr_direc, "/");
+        strcat(curr_direc, name);
+        rename(target_direc, curr_direc);
+
+        break;
+
       case 's':
       case 'S':
 
@@ -331,4 +370,6 @@ int main(int argc, char const *argv[])
   }
 
   return 0;
+  free(files);
+  free(dirs);
 }
